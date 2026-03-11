@@ -11,9 +11,7 @@ skip_validate = false
 [[ci.runners]]
 type = "local"
 build = [
-    "npm",
-    "run",
-    "build",
+    "npm install && npm run build",
 ]
 test = [
     "npm",
@@ -24,8 +22,6 @@ timeout_secs = 300
 [[ci.runners]]
 type = "docker"
 build = [
-    "sh",
-    "-c",
     "npm install && npm run build",
 ]
 test = [
