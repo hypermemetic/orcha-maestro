@@ -160,170 +160,94 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { OrchaClient, type OrchaSession, type AgentInfo, type AgentSummary } from './lib/orchaClient'
 
-const client = ref<OrchaClient | null>(null)
+// TODO: Implement using the generated plexus client in src/lib/plexus/
+
+type SessionState =
+  | { state: 'idle' }
+  | { state: 'running'; stream_id: string; sequence: number; active_agents: number; completed_agents: number; failed_agents: number }
+  | { state: 'waiting_approval'; approval_id: string }
+  | { state: 'validating'; test_command: string }
+  | { state: 'complete' }
+  | { state: 'failed'; error: string }
+
+interface OrchaSession {
+  session_id: string
+  model: string
+  created_at: number
+  last_activity: number
+  state: SessionState
+  retry_count: number
+  max_retries: number
+  agent_mode: 'single' | 'multi'
+  primary_agent_id?: string
+}
+
+type AgentState =
+  | { state: 'idle' }
+  | { state: 'running'; sequence: number }
+  | { state: 'waiting_approval'; approval_id: string }
+  | { state: 'validating'; test_command: string }
+  | { state: 'complete' }
+  | { state: 'failed'; error: string }
+
+interface AgentInfo {
+  agent_id: string
+  session_id: string
+  claudecode_session_id: string
+  subtask: string
+  state: AgentState
+  is_primary: boolean
+  parent_agent_id?: string
+  created_at: number
+  last_activity: number
+  completed_at?: number
+  error_message?: string
+}
+
+interface AgentSummary {
+  agent_id: string
+  subtask: string
+  state: AgentState
+  summary: string
+}
+
 const isConnected = ref(false)
 const error = ref('')
-
 const sessions = ref<OrchaSession[]>([])
 const selectedSession = ref<OrchaSession | null>(null)
 const agents = ref<AgentInfo[]>([])
 const statusSummary = ref<{ summary: string; agent_summaries: AgentSummary[] } | null>(null)
 
-const newSession = ref({
-  model: 'sonnet',
-  max_retries: 3,
-  multi_agent: true,
-})
-
-const newAgent = ref({
-  subtask: '',
-})
-
+const newSession = ref({ model: 'sonnet', max_retries: 3, multi_agent: true })
+const newAgent = ref({ subtask: '' })
 const creatingSession = ref(false)
 const spawningAgent = ref(false)
 const checkingStatus = ref(false)
 
-async function connect() {
-  try {
-    error.value = ''
-    client.value = new OrchaClient()
-    await client.value.connect()
-    isConnected.value = true
-    await loadSessions()
-  } catch (e: any) {
-    error.value = e.message || 'Failed to connect'
-    console.error('Connection error:', e)
-  }
-}
+async function connect() { error.value = 'Not implemented' }
+async function createSession() {}
+async function loadSessions() {}
+async function selectSession(session: OrchaSession) { selectedSession.value = session }
+async function spawnAgent() {}
+async function loadAgents() {}
+async function checkStatus() {}
 
-async function createSession() {
-  if (!client.value) return
-
-  try {
-    creatingSession.value = true
-    const result = await client.value.createSession({
-      model: newSession.value.model,
-      max_retries: newSession.value.max_retries,
-      multi_agent: newSession.value.multi_agent,
-    })
-    console.log('Session created:', result)
-    await loadSessions()
-  } catch (e: any) {
-    error.value = e.message || 'Failed to create session'
-    console.error('Create session error:', e)
-  } finally {
-    creatingSession.value = false
-  }
-}
-
-async function loadSessions() {
-  if (!client.value) return
-
-  try {
-    sessions.value = await client.value.listSessions()
-  } catch (e: any) {
-    console.error('Load sessions error:', e)
-  }
-}
-
-async function selectSession(session: OrchaSession) {
-  selectedSession.value = session
-  statusSummary.value = null
-
-  if (session.agent_mode === 'multi') {
-    await loadAgents()
-  }
-}
-
-async function spawnAgent() {
-  if (!client.value || !selectedSession.value || !newAgent.value.subtask) return
-
-  try {
-    spawningAgent.value = true
-    await client.value.spawnAgent({
-      session_id: selectedSession.value.session_id,
-      subtask: newAgent.value.subtask,
-    })
-    newAgent.value.subtask = ''
-    await loadAgents()
-    await loadSessions()
-  } catch (e: any) {
-    error.value = e.message || 'Failed to spawn agent'
-    console.error('Spawn agent error:', e)
-  } finally {
-    spawningAgent.value = false
-  }
-}
-
-async function loadAgents() {
-  if (!client.value || !selectedSession.value) return
-
-  try {
-    agents.value = await client.value.listAgents({
-      session_id: selectedSession.value.session_id,
-    })
-  } catch (e: any) {
-    console.error('Load agents error:', e)
-  }
-}
-
-async function checkStatus() {
-  if (!client.value || !selectedSession.value) return
-
-  try {
-    checkingStatus.value = true
-    statusSummary.value = await client.value.checkStatus({
-      session_id: selectedSession.value.session_id,
-    })
-  } catch (e: any) {
-    error.value = e.message || 'Failed to check status'
-    console.error('Check status error:', e)
-  } finally {
-    checkingStatus.value = false
-  }
-}
-
-function getStateName(state: any): string {
+function getStateName(state: SessionState | AgentState | null): string {
   if (!state) return 'Unknown'
-  const name = state.state || 'unknown'
+  const name = state.state
   return name.charAt(0).toUpperCase() + name.slice(1)
 }
-
-function getStateClass(state: any): string {
-  if (!state) return ''
-  return state.state || ''
+function getStateClass(state: SessionState | AgentState | null): string {
+  return state?.state ?? ''
 }
-
-function getAgentStateName(state: any): string {
-  return getStateName(state)
-}
-
-function getAgentStateClass(state: any): string {
-  return getStateClass(state)
-}
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleString()
-}
+function getAgentStateName(state: AgentState | null): string { return getStateName(state) }
+function getAgentStateClass(state: AgentState | null): string { return getStateClass(state) }
+function formatDate(timestamp: number): string { return new Date(timestamp * 1000).toLocaleString() }
 
 onMounted(() => {
-  connect()
-
-  const interval = setInterval(() => {
-    if (isConnected.value) {
-      loadSessions()
-      if (selectedSession.value?.agent_mode === 'multi') {
-        loadAgents()
-      }
-    }
-  }, 5000)
-
-  onUnmounted(() => {
-    clearInterval(interval)
-    client.value?.disconnect()
-  })
+  const interval = setInterval(() => {}, 5000)
+  onUnmounted(() => clearInterval(interval))
 })
 </script>
 
