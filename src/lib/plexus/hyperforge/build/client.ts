@@ -15,6 +15,8 @@ export interface HyperforgeBuildClient {
   detectNameMismatches(path: string): AsyncGenerator<HyperforgeEvent>;
   /** Run a command across all workspace repos */
   exec(command: string, path: string, dirty?: boolean | null, filter?: string | null, sequential?: boolean | null): AsyncGenerator<HyperforgeEvent>;
+  /** Ensure sane .gitignore patterns across all workspace repos */
+  gitignoreSync(path: string, dryRun?: boolean | null, filter?: string | null, patterns?: unknown[] | null): AsyncGenerator<HyperforgeEvent>;
   /** Compare local package versions against their registries */
   packageDiff(path: string, filter?: string | null): AsyncGenerator<HyperforgeEvent>;
   /** Publish packages with transitive dependency resolution */
@@ -49,6 +51,11 @@ class HyperforgeBuildClientImpl implements HyperforgeBuildClient {
 
   async *exec(command: string, path: string, dirty?: boolean | null, filter?: string | null, sequential?: boolean | null): AsyncGenerator<HyperforgeEvent> {
     const stream = this.rpc.call('hyperforge.build.exec', { command, dirty, filter, path, sequential });
+    yield* extractData<HyperforgeEvent>(stream);
+  }
+
+  async *gitignoreSync(path: string, dryRun?: boolean | null, filter?: string | null, patterns?: unknown[] | null): AsyncGenerator<HyperforgeEvent> {
+    const stream = this.rpc.call('hyperforge.build.gitignore_sync', { dry_run: dryRun, filter, path, patterns });
     yield* extractData<HyperforgeEvent>(stream);
   }
 

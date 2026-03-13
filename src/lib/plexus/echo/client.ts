@@ -2,15 +2,17 @@
 // Wraps RPC layer and unwraps PlexusStreamItem to domain types
 
 import type { RpcClient } from '../rpc';
-import { collectOne } from '../rpc';
+import { extractData, collectOne } from '../rpc';
 import type { EchoEvent } from './types';
 
 /** Typed client interface for echo plugin */
 export interface EchoClient {
   /** Echo a message back */
-  echo(count: number, message: string): Promise<EchoEvent>;
+  echo(count: number, message: string): AsyncGenerator<EchoEvent>;
   /** Echo a simple message once */
-  once(message: string): Promise<EchoEvent>;
+  once(message: string): AsyncGenerator<EchoEvent>;
+  /** Ping — returns a Pong response */
+  ping(): AsyncGenerator<EchoEvent>;
   /** Get plugin or method schema. Pass {"method": "name"} for a specific method. */
   schema(): Promise<unknown>;
 }
@@ -20,14 +22,19 @@ class EchoClientImpl implements EchoClient {
   private rpc: RpcClient;
   constructor(rpc: RpcClient) { this.rpc = rpc; }
 
-  async echo(count: number, message: string): Promise<EchoEvent> {
+  async *echo(count: number, message: string): AsyncGenerator<EchoEvent> {
     const stream = this.rpc.call('echo.echo', { count, message });
-    return collectOne<EchoEvent>(stream);
+    yield* extractData<EchoEvent>(stream);
   }
 
-  async once(message: string): Promise<EchoEvent> {
+  async *once(message: string): AsyncGenerator<EchoEvent> {
     const stream = this.rpc.call('echo.once', { message });
-    return collectOne<EchoEvent>(stream);
+    yield* extractData<EchoEvent>(stream);
+  }
+
+  async *ping(): AsyncGenerator<EchoEvent> {
+    const stream = this.rpc.call('echo.ping', {});
+    yield* extractData<EchoEvent>(stream);
   }
 
   async schema(): Promise<unknown> {
