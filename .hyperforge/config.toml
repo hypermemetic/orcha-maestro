@@ -1,0 +1,32 @@
+org = "hypermemetic"
+forges = [
+    "codeberg",
+    "github",
+]
+visibility = "public"
+
+[ci]
+skip_validate = false
+
+[[ci.runners]]
+type = "local"
+build = [
+    "npm install && npm run build",
+]
+test = [
+    "npm",
+    "test",
+]
+timeout_secs = 300
+
+[[ci.runners]]
+type = "docker"
+build = [
+    "npm install && npm run build",
+]
+test = [
+    "npm",
+    "test",
+]
+image = "node:lts"
+timeout_secs = 600
