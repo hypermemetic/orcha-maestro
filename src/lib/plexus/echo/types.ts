@@ -10,7 +10,13 @@ export interface EchoEventEcho {
   message: string;
 }
 
+/** Pong response (from ping) */
+export interface EchoEventPong {
+  type: 'pong';
+}
+
 /** Events from echo operations */
-export type EchoEvent = EchoEventEcho;
+export type EchoEvent = EchoEventEcho | EchoEventPong;
 
 export function isEchoEventEcho(e: EchoEvent): e is EchoEventEcho { return e.type === 'echo'; }
+export function isEchoEventPong(e: EchoEvent): e is EchoEventPong { return e.type === 'pong'; }
