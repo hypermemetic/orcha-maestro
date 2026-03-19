@@ -25,3 +25,8 @@ src/generated/
 *.njsproj
 *.sln
 *.sw?
+
+# Generated output and profiling
+generated/
+*.hp
+*.prof
